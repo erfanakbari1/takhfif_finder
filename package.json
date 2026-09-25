@@ -9,6 +9,8 @@
     "test": "node scripts/build.mjs && node test/engine.test.js"
   },
   "devDependencies": {
+    "acorn": "^8.18.0",
     "terser": "^5.44.0"
-  }
+  },
+  "license": "MIT"
 }

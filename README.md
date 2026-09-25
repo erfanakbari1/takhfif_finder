@@ -1,5 +1,10 @@
 # 🎁 تخفیف‌یاب — Takhfif Finder
 
+[![tests](https://github.com/erfanakbari1/takhfif_finder/actions/workflows/test.yml/badge.svg)](https://github.com/erfanakbari1/takhfif_finder/actions/workflows/test.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+[English summary ↓](#-english-summary)
+
 ربات تلگرامی [@takhfif_finder_bot](https://t.me/takhfif_finder_bot): همه‌ی کدهای تخفیف فعال، معتبر و حتی **مخفیِ** اسنپ، تپسی، دیجی‌کالا و ده‌ها فروشگاه ایرانی دیگر را از بیش از ۱۰ سایت و کانال کد تخفیف جمع می‌کند، تکراری‌ها را ادغام و منقضی‌ها را حذف می‌کند و با یک منوی تمیز تحویل می‌دهد.
 
 کل سیستم روی **n8n** اجرا می‌شود. منطق در همین ریپو با تست نوشته شده و به‌صورت کد داخل نودهای n8n دیپلوی می‌شود.
@@ -120,3 +125,20 @@ npm test                 # بیلد + تست هر دو نسخه‌ی خوانا 
   - منبع: یک پارسر در `PARSERS` و چند job در `buildPlan` در `src/crawler/sources.js`، به‌علاوه‌ی یک fixture تست.
 
 > 🔐 توکن ربات و secret وب‌هوک فقط داخل نودهای n8n هستند. در `dist/` به‌جایشان `__TELEGRAM_BOT_TOKEN__` و `__WEBHOOK_SECRET__` آمده است. آدرس سرور و شناسه‌ها هم از `config.example.json` می‌آیند، نه از سرور واقعی.
+
+## 🇬🇧 English summary
+
+**Takhfif Finder** is a Telegram bot ([@takhfif_finder_bot](https://t.me/takhfif_finder_bot)) that collects active discount codes for Iranian services and online shops (Snapp, Tapsi, Digikala and 120+ more brands) and serves them through clean Persian menus.
+
+- **Crawler:** every 2 hours it fetches 9 coupon sites and 9 public Telegram channels, reveals codes hidden behind "show code" buttons, merges the same code found on several sources, scores it, and re-checks known codes about twice a day so expired ones drop out. Requests are throttled, and single-use codes are never consumed.
+- **Bot:** brand and service menus (Snapp Food, Tapsi Garage, Digikala Jet, …), Persian search, one-tap copy buttons, and alerts when a followed brand gets a new code. Optionally, users must join a channel first.
+- **Runs on [n8n](https://n8n.io):** four workflows (Engine, Crawler, Telegram Bot, Setup) and three n8n Data Tables. The logic lives in this repo as plain JavaScript (`src/`). It is bundled into n8n Code nodes, and the tests run the exact bundles that get deployed.
+
+```bash
+npm install
+npm test   # builds dist/ and tests both the readable and the minified bundles
+```
+
+Deployment notes, the source list and the repo layout are in the Persian sections above. Bot token, webhook secret and instance ids are never committed (see `config.example.json`).
+
+Licensed under the [MIT License](LICENSE).
