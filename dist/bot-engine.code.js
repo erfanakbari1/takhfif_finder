@@ -1020,8 +1020,10 @@ function buildReply(ctx, route, data, nowMs) {
     };
   }
   if (ctx.kind === 'member') {
-    if (user) user.blocked = ctx.status === 'kicked';
-    return { calls, user };
+    // Only a block is worth saving: starting the bot also sends /start at the same moment, and saving both
+    // concurrently would store the new user twice. Any later message clears the flag again.
+    if (user && ctx.status === 'kicked') { user.blocked = true; return { calls, user }; }
+    return { calls, user: null };
   }
   if (route.view === 'ignore') return { calls, user: null };
   if (ctx.kind === 'callback' && route.view === 'noop') {
@@ -1072,8 +1074,15 @@ function buildReply(ctx, route, data, nowMs) {
 function buildAlerts(newRows, users, nowMs) {
   const now = nowMs || Date.now();
   const out = [];
+  // Two updates handled at once can still store a user twice: alert each chat once, from its latest row.
+  const latest = {};
   for (const u of users) {
-    if (!u || u.blocked || !u.subs) continue;
+    if (!u || !u.user_id) continue;
+    const prev = latest[u.user_id];
+    if (!prev || String(u.last_seen || '') > String(prev.last_seen || '')) latest[u.user_id] = u;
+  }
+  for (const u of Object.values(latest)) {
+    if (u.blocked || !u.subs) continue;
     const subs = subsOf(u);
     const hits = newRows.filter((r) => subs.has(r.brand + ':*') || subs.has(r.brand + ':' + r.service)).slice(0, 5);
     if (!hits.length) continue;

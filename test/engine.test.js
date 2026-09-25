@@ -118,6 +118,22 @@ check('alerts go only to followers', async () => {
   const out = (await runEngine({ op: 'alerts', rows, users: [{ user_id: '1', subs: 'snapp:food' }, { user_id: '2', subs: 'tapsi:*' }, { user_id: '3', subs: 'snapp:*', blocked: true }] }));
   assert.strictEqual(out.length, 1);
   assert.strictEqual(out[0].payload.chat_id, '1');
+  // A user stored twice is alerted once, following the latest row (here: alerts turned off).
+  const dup = await runEngine({ op: 'alerts', rows, users: [
+    { user_id: '7', subs: 'snapp:*', last_seen: '2026-09-25T10:00:00.000Z' }, { user_id: '7', subs: 'snapp:*', last_seen: '2026-09-25T10:00:01.000Z' },
+    { user_id: '8', subs: 'snapp:*', last_seen: '2026-09-25T10:00:00.000Z' }, { user_id: '8', subs: 'tapsi:*', last_seen: '2026-09-25T11:00:00.000Z' }] });
+  assert.deepStrictEqual(dup.map((a) => a.payload.chat_id), ['7']);
+});
+
+check('joining the bot does not save the user (the /start message does); blocking does', async () => {
+  const member = (status) => ({ my_chat_member: { chat: { id: 9, type: 'private' }, from: { id: 9, first_name: 'Z' }, date: 1, old_chat_member: { status: 'member' }, new_chat_member: { status } } });
+  const reply = async (update) => {
+    const p = (await runEngine({ op: 'botParse', update }))[0];
+    return runEngine({ op: 'botReply', p, user: {}, stats: {}, rows: [] });
+  };
+  assert.ok(!(await reply(member('member'))).some((r) => r._op === 'user'));
+  const blocked = (await reply(member('kicked'))).find((r) => r._op === 'user');
+  assert.strictEqual(blocked.blocked, true);
 });
 
 if (fixtures && fs.existsSync(fixtures)) {

@@ -63,7 +63,11 @@ const loadUser = node({
       dataTableId: TABLE_USERS,
       matchType: 'allConditions',
       filters: { conditions: [{ keyName: 'user_id', condition: 'eq', keyValue: expr('{{ $json.userId }}') }] },
-      limit: 1
+      limit: 1,
+      // If two concurrent updates ever stored the user twice, use the latest row.
+      orderBy: true,
+      orderByColumn: 'last_seen',
+      orderByDirection: 'DESC'
     }
   },
   output: [{ user_id: '1', subs: '' }]
