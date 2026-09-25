@@ -1,0 +1,12 @@
+{
+  "N8N_BASE_URL": "https://your-n8n.example.com",
+  "PROJECT_ID": "__N8N_PROJECT_ID__",
+  "TABLE_COUPONS": "__TABLE_COUPONS_ID__",
+  "TABLE_USERS": "__TABLE_USERS_ID__",
+  "TABLE_META": "__TABLE_META_ID__",
+  "BOT_WEBHOOK_PATH": "takhfif-finder-bot",
+  "BOT_USERNAME": "takhfif_finder_bot",
+  "ENGINE_WORKFLOW_ID": "__ENGINE_WORKFLOW_ID__",
+  "WEBHOOK_URL": "https://your-n8n.example.com/webhook/takhfif-finder-bot",
+  "REQUIRED_CHANNEL": ""
+}

@@ -1,0 +1,16 @@
+{
+  "name": "takhfif-finder",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Iranian discount-code finder: n8n crawler + Telegram bot (@takhfif_finder_bot)",
+  "type": "commonjs",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node scripts/build.mjs && node test/engine.test.js"
+  },
+  "devDependencies": {
+    "acorn": "^8.18.0",
+    "terser": "^5.44.0"
+  },
+  "license": "MIT"
+}
