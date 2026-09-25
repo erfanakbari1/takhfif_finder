@@ -1,0 +1,5 @@
+build/
+node_modules/
+.env
+# your instance ids and URLs (see config.example.json)
+config.json

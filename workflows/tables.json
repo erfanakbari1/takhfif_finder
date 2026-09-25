@@ -1,0 +1,16 @@
+{
+  "coupons": [
+    ["ckey", "string"], ["brand", "string"], ["brand_fa", "string"], ["service", "string"], ["category", "string"],
+    ["code", "string"], ["alt_codes", "string"], ["title", "string"], ["descr", "string"], ["discount", "string"],
+    ["pct", "number"], ["toman", "number"], ["conditions", "string"], ["expires_at", "date"], ["link", "string"],
+    ["src_url", "string"], ["sources", "string"], ["refs", "string"], ["kind", "string"], ["hidden", "boolean"],
+    ["score", "number"], ["first_seen", "date"], ["last_seen", "date"], ["active", "boolean"], ["sig", "string"]
+  ],
+  "users": [
+    ["user_id", "string"], ["first_name", "string"], ["username", "string"], ["subs", "string"],
+    ["joined_at", "date"], ["last_seen", "date"], ["blocked", "boolean"]
+  ],
+  "meta": [
+    ["key", "string"], ["value", "string"], ["updated_at", "date"]
+  ]
+}
