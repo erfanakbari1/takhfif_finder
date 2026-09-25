@@ -20,7 +20,7 @@ if (op === 'botReply') {
   try { stats = req.stats && req.stats.value ? JSON.parse(req.stats.value) : {}; } catch (e) { stats = {}; }
   const user = req.user && req.user.user_id ? req.user : null;
   const rows = p.q && p.q.need ? (req.rows || []).filter((r) => r && r.ckey) : [];
-  const rep = buildReply(p.ctx || {}, p.route || { view: 'home', query: {} }, { stats, user, rows });
+  const rep = buildReply(p.ctx || {}, p.route || { view: 'home', query: {} }, { stats, user, rows, gate: req.gate || null });
   const out = rep.calls.map((c) => ({ json: { _op: 'tg', method: c.method, payload: c.payload } }));
   if (rep.user) out.push({ json: Object.assign({ _op: 'user' }, rep.user) });
   return out;

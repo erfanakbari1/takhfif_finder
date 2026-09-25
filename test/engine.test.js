@@ -113,6 +113,51 @@ check('known coupons: refreshed twice a day, keep their best text, expire when a
   assert.strictEqual(ups.find((u) => u.ckey === 'tapsi|TG1').active, false, 'a refresh that finds it expired deactivates it');
 });
 
+check('channel gate: non-members get the join message, "I joined" re-checks and resumes', async () => {
+  const gate = (status) => ({ channel: '@GozarNetPro', check: status ? { ok: true, result: { status } } : { ok: false, error_code: 400, description: 'Bad Request: member list is inaccessible' } });
+  const stats = { value: JSON.stringify({ total: 1716, codes: 663, brands: { snapp: { fa: 'اسنپ', n: 10, c: 5, s: { food: 3 } } }, sources: {} }) };
+  const msg = (text) => ({ message: { message_id: 1, from: { id: 5, first_name: 'Ali' }, chat: { id: 5, type: 'private' }, text } });
+  const cb = (data) => ({ callback_query: { id: 'c1', from: { id: 5, first_name: 'Ali' }, data, message: { message_id: 9, chat: { id: 5, type: 'private' } } } });
+  const rows = [{ ckey: 'snapp|F1', brand: 'snapp', service: 'food', brand_fa: 'اسنپ', title: 'کد فود', code: 'F1', kind: 'code', sources: 'offch', active: true, score: 90 }];
+  const reply = async (update, g) => {
+    const p = (await runEngine({ op: 'botParse', update }))[0];
+    return { p, out: await runEngine({ op: 'botReply', p, user: {}, stats, rows: p.q.need ? rows : [], gate: g }) };
+  };
+  // Not a member: /start shows the gate, with a join link and an "I joined" button that returns home.
+  let { out } = await reply(msg('/start'), gate('left'));
+  const send = out.find((o) => o.method === 'sendMessage');
+  assert.ok(send.payload.text.includes('@GozarNetPro') && send.payload.text.includes('۱۷۱۶'));
+  const kb = send.payload.reply_markup.inline_keyboard.flat();
+  assert.strictEqual(kb[0].url, 'https://t.me/GozarNetPro');
+  assert.strictEqual(kb[1].callback_data, 'j:h');
+  assert.ok(out.some((o) => o._op === 'user'), 'the user is still saved');
+  // A deep link or button resumes exactly there after joining.
+  ({ out } = await reply(msg('/start snapp__food'), gate('left')));
+  assert.strictEqual(out.find((o) => o.method === 'sendMessage').payload.reply_markup.inline_keyboard[1][0].callback_data, 'j:s:snapp:food:0');
+  ({ out } = await reply(cb('s:snapp:food:1'), gate('kicked')));
+  assert.deepStrictEqual(out.filter((o) => o._op === 'tg').map((o) => o.method), ['answerCallbackQuery', 'editMessageText']);
+  // "I joined" while still outside: only an alert, the gate message stays.
+  ({ out } = await reply(cb('j:s:snapp:food:0'), gate('left')));
+  const tg = out.filter((o) => o._op === 'tg');
+  assert.strictEqual(tg.length, 1);
+  assert.strictEqual(tg[0].payload.show_alert, true);
+  // "I joined" as a member: the list opens with a welcome toast (and the query was built for it).
+  const joined = await reply(cb('j:s:snapp:food:0'), gate('member'));
+  assert.deepStrictEqual([joined.p.route.view, joined.p.q.value, joined.p.q.value2], ['list', 'snapp', 'food']);
+  const edit = joined.out.find((o) => o.method === 'editMessageText');
+  assert.ok(edit.payload.text.includes('F1'));
+  assert.ok(joined.out.find((o) => o.method === 'answerCallbackQuery').payload.text.includes('تأیید'));
+  // Members and failed checks (bot not admin of the channel) use the bot normally.
+  for (const g of [gate('administrator'), gate(null), null]) {
+    ({ out } = await reply(msg('/start'), g));
+    assert.ok(out.find((o) => o.method === 'sendMessage').payload.text.includes('تخفیف\u200cیاب</b> |'), 'home menu');
+  }
+  // Long searches still fit Telegram's 64-byte callback data.
+  ({ out } = await reply(msg('کد تخفیف خرید بلیط هواپیما خارجی ارزان برای تعطیلات تابستان'), gate('left')));
+  const data = out.find((o) => o.method === 'sendMessage').payload.reply_markup.inline_keyboard[1][0].callback_data;
+  assert.ok(data.startsWith('j:r:0:') && Buffer.byteLength(data) <= 64, data);
+});
+
 check('alerts go only to followers', async () => {
   const rows = [{ brand: 'snapp', service: 'food', brand_fa: 'اسنپ', title: 'کد', code: 'X1', kind: 'code', sources: 'offch' }];
   const out = (await runEngine({ op: 'alerts', rows, users: [{ user_id: '1', subs: 'snapp:food' }, { user_id: '2', subs: 'tapsi:*' }, { user_id: '3', subs: 'snapp:*', blocked: true }] }));

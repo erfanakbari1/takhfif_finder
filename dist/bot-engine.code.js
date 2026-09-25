@@ -651,6 +651,8 @@ function routeUpdate(ctx) {
       case 'q': return { view: 'searchHelp', query: none };
       case 'help': return { view: 'help', query: none };
       case 'noop': return { view: 'noop', query: none };
+      case 'j': // "I joined" on the channel gate: re-check membership, then open the view the user was heading to
+        return Object.assign({}, routeUpdate(Object.assign({}, ctx, { data: p.slice(1).join(':') || 'h' })), { joinCheck: true });
       default: return { view: 'home', query: none };
     }
   }
@@ -1007,6 +1009,65 @@ function viewStats(ctx, data, now) {
 
 // ---- Main -----------------------------------------------------------------------------------------
 // data: { stats, user, rows }. Returns { calls: [{method, payload}], user: {...} | null }.
+// ---- Channel gate ---------------------------------------------------------------------------------
+// gate: { channel: '@name', check: raw getChatMember response }. The bot must be an admin of the channel for
+// Telegram to answer; any failed check counts as 'off' so a misconfiguration never locks users out.
+function channelGate(gate) {
+  if (!gate || !gate.channel) return 'off';
+  const c = gate.check || {};
+  if (!c.ok || !c.result) return 'off';
+  const st = c.result.status;
+  if (st === 'creator' || st === 'administrator' || st === 'member') return 'member';
+  if (st === 'restricted') return c.result.is_member ? 'member' : 'out';
+  return 'out'; // left / kicked
+}
+
+function utf8Len(s) {
+  let n = 0;
+  for (const ch of s) { const c = ch.codePointAt(0); n += c < 0x80 ? 1 : c < 0x800 ? 2 : c < 0x10000 ? 3 : 4; }
+  return n;
+}
+
+// Callback data of the "I joined" button: reopens what the user asked for (Telegram allows 64 bytes).
+function resumeData(r) {
+  const p = r.page || 0;
+  const list = (b, svc, pg) => 's:' + b + ':' + (svc || '*') + ':' + pg;
+  const to = {
+    brand: () => 'b:' + r.brand, list: () => list(r.brand, r.service, p), newest: () => 'n:' + p, hot: () => 't:' + p,
+    follow: () => (r.ret === 'l' ? list(r.brand, r.service, 0) : 'b:' + r.brand), stores: () => 'a:' + p, cats: () => 'cats',
+    cat: () => 'c:' + r.cat + ':' + p, mysubs: () => 'my', unfollow: () => 'my', searchHelp: () => 'q', help: () => 'help',
+    search: () => 'r:' + p + ':' + String(r.q || '').slice(0, 18),
+  }[r.view];
+  const chars = Array.from('j:' + (to ? to() : 'h'));
+  while (utf8Len(chars.join('')) > 64) chars.pop();
+  return chars.join('');
+}
+
+function viewJoin(ctx, data, route, channel) {
+  const stats = data.stats || {};
+  const handle = String(channel).replace(/^@/, '');
+  const hi = ctx.firstName ? 'سلام ' + esc(oneLine(ctx.firstName, 30)) + '! ' : 'سلام! ';
+  const text = [
+    '🎁 <b>' + hi + 'به تخفیف\u200cیاب خوش اومدی</b>',
+    '',
+    '🔓 ' + (stats.total ? '<b>' + fa(stats.total) + '</b> کد تخفیف و آفر فعال' : 'همه\u200cی کدهای تخفیف فعال') +
+      ' اسنپ، تپسی، دیجی\u200cکالا و ده\u200cها فروشگاه دیگه منتظرته!',
+    '',
+    '📢 برای استفاده از ربات، فقط کافیه عضو کانال ما بشی:',
+    '👈 <b>@' + esc(handle) + '</b>',
+    '',
+    '✅ عضویت رایگانه و چند ثانیه بیشتر طول نمی\u200cکشه',
+    '⚡\ufe0f بعدش کدهای مخفی، جستجوی هوشمند و اعلان کد جدید برات باز میشه',
+    '',
+    '👇 روی «عضویت در کانال» بزن، عضو شو و بعد «عضو شدم» رو بزن',
+  ].join('\n');
+  const kb = [
+    [{ text: '📢 عضویت در کانال ' + handle, url: 'https://t.me/' + handle }],
+    [{ text: '✅ عضو شدم، بزن بریم!', callback_data: resumeData(route) }],
+  ];
+  return { text, kb };
+}
+
 function buildReply(ctx, route, data, nowMs) {
   const now = nowMs || Date.now();
   const calls = [];
@@ -1031,6 +1092,24 @@ function buildReply(ctx, route, data, nowMs) {
     return { calls, user: null };
   }
   let toast = '';
+  const gate = channelGate(data.gate);
+  if (gate === 'out' && (ctx.kind === 'message' || ctx.kind === 'callback')) {
+    if (route.joinCheck) {
+      calls.push({ method: 'answerCallbackQuery', payload: { callback_query_id: ctx.cbId, show_alert: true,
+        text: '❌ هنوز عضو کانال نشدی!\n\nاول روی «عضویت در کانال» بزن، عضو شو و بعد دوباره «عضو شدم» رو بزن 🙏' } });
+      return { calls, user };
+    }
+    const g = viewJoin(ctx, data, route, data.gate.channel);
+    const payload = { text: g.text, parse_mode: 'HTML', link_preview_options: { is_disabled: true }, reply_markup: { inline_keyboard: g.kb } };
+    if (ctx.kind === 'callback') {
+      calls.push({ method: 'answerCallbackQuery', payload: { callback_query_id: ctx.cbId, text: '🔒 اول عضو کانال شو' } });
+      calls.push({ method: 'editMessageText', payload: Object.assign({ chat_id: ctx.chatId, message_id: ctx.msgId }, payload) });
+    } else {
+      calls.push({ method: 'sendMessage', payload: Object.assign({ chat_id: ctx.chatId }, payload) });
+    }
+    return { calls, user };
+  }
+  if (route.joinCheck && gate === 'member') toast = '🎉 عضویتت تأیید شد؛ خوش اومدی!';
   let r = route;
   if (route.view === 'follow' || route.view === 'unfollow') {
     const subs = subsOf(data.user);
@@ -1118,7 +1197,7 @@ if (op === 'botReply') {
   try { stats = req.stats && req.stats.value ? JSON.parse(req.stats.value) : {}; } catch (e) { stats = {}; }
   const user = req.user && req.user.user_id ? req.user : null;
   const rows = p.q && p.q.need ? (req.rows || []).filter((r) => r && r.ckey) : [];
-  const rep = buildReply(p.ctx || {}, p.route || { view: 'home', query: {} }, { stats, user, rows });
+  const rep = buildReply(p.ctx || {}, p.route || { view: 'home', query: {} }, { stats, user, rows, gate: req.gate || null });
   const out = rep.calls.map((c) => ({ json: { _op: 'tg', method: c.method, payload: c.payload } }));
   if (rep.user) out.push({ json: Object.assign({ _op: 'user' }, rep.user) });
   return out;

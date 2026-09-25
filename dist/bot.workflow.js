@@ -50,19 +50,41 @@ const understand = node({
   output: [{ ctx: {}, route: { view: 'home' }, q: { need: false }, userId: '1' }]
 });
 
+// Membership of the channel users must join (REQUIRED_CHANNEL). Telegram only answers when the bot is an admin of
+// that channel; the Engine treats any error as "not checked", so a misconfiguration never locks users out.
+const checkMember = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.4,
+  config: {
+    name: 'Check Membership',
+    position: [720, 300],
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'POST',
+      url: 'https://api.telegram.org/bot__TELEGRAM_BOT_TOKEN__/getChatMember',
+      sendBody: true,
+      contentType: 'json',
+      specifyBody: 'json',
+      jsonBody: expr('{{ JSON.stringify({ chat_id: "", user_id: Number($json.userId) }) }}'),
+      options: { response: { response: { neverError: true } }, timeout: 10000 }
+    }
+  },
+  output: [{ ok: true, result: { status: 'member' } }]
+});
+
 const loadUser = node({
   type: 'n8n-nodes-base.dataTable',
   version: 1.1,
   config: {
     name: 'Load User',
-    position: [720, 300],
+    position: [960, 300],
     alwaysOutputData: true,
     parameters: {
       resource: 'row',
       operation: 'get',
       dataTableId: TABLE_USERS,
       matchType: 'allConditions',
-      filters: { conditions: [{ keyName: 'user_id', condition: 'eq', keyValue: expr('{{ $json.userId }}') }] },
+      filters: { conditions: [{ keyName: 'user_id', condition: 'eq', keyValue: expr("{{ $('Understand Update').first().json.userId }}") }] },
       limit: 1,
       // If two concurrent updates ever stored the user twice, use the latest row.
       orderBy: true,
@@ -78,7 +100,7 @@ const loadStats = node({
   version: 1.1,
   config: {
     name: 'Load Stats',
-    position: [960, 300],
+    position: [1200, 300],
     alwaysOutputData: true,
     executeOnce: true,
     parameters: {
@@ -97,7 +119,7 @@ const needCoupons = ifElse({
   version: 2.3,
   config: {
     name: 'Need Coupons?',
-    position: [1200, 300],
+    position: [1440, 300],
     parameters: {
       conditions: {
         options: { caseSensitive: true, leftValue: '', typeValidation: 'loose' },
@@ -114,7 +136,7 @@ const queryCoupons = node({
   version: 1.1,
   config: {
     name: 'Query Coupons',
-    position: [1440, 200],
+    position: [1680, 200],
     alwaysOutputData: true,
     executeOnce: true,
     parameters: {
@@ -152,15 +174,15 @@ const makeReply = node({
   version: 2,
   config: {
     name: 'Make Reply Request',
-    position: [1680, 300],
+    position: [1920, 300],
     executeOnce: true,
     parameters: {
       mode: 'runOnceForAllItems',
       language: 'javaScript',
-      jsCode: "const p = $('Understand Update').first().json;\nlet user = {};\ntry { user = $('Load User').first().json || {}; } catch (e) { user = {}; }\nlet stats = {};\ntry { stats = $('Load Stats').first().json || {}; } catch (e) { stats = {}; }\nlet rows = [];\nif (p.q && p.q.need) {\n  try { rows = $('Query Coupons').all().map((i) => i.json); } catch (e) { rows = []; }\n}\nreturn [{ json: { op: 'botReply', p, user, stats, rows } }];"
+      jsCode: "const p = $('Understand Update').first().json;\nlet user = {};\ntry { user = $('Load User').first().json || {}; } catch (e) { user = {}; }\nlet stats = {};\ntry { stats = $('Load Stats').first().json || {}; } catch (e) { stats = {}; }\nlet rows = [];\nif (p.q && p.q.need) {\n  try { rows = $('Query Coupons').all().map((i) => i.json); } catch (e) { rows = []; }\n}\nlet check = {};\ntry { check = $('Check Membership').first().json || {}; } catch (e) { check = {}; }\nreturn [{ json: { op: 'botReply', p, user, stats, rows, gate: { channel: '', check } } }];"
     }
   },
-  output: [{ op: 'botReply', p: {}, user: {}, stats: {}, rows: [] }]
+  output: [{ op: 'botReply', p: {}, user: {}, stats: {}, rows: [], gate: { channel: '', check: {} } }]
 });
 
 const buildReply = node({
@@ -168,7 +190,7 @@ const buildReply = node({
   version: 1.3,
   config: {
     name: 'Build Reply',
-    position: [1920, 300],
+    position: [2160, 300],
     parameters: { source: 'database', workflowId: ENGINE, mode: 'once', options: { waitForSubWorkflow: true } }
   },
   output: [{ _op: 'tg', method: 'sendMessage', payload: { chat_id: 1, text: 'hi' } }]
@@ -178,7 +200,7 @@ const routeReply = switchCase({
   version: 3.4,
   config: {
     name: 'Route Reply',
-    position: [2160, 300],
+    position: [2400, 300],
     parameters: { mode: 'rules', rules: { values: [{"renameOutput":true,"outputKey":"tg","conditions":{"options":{"caseSensitive":true,"leftValue":"","typeValidation":"loose"},"conditions":[{"leftValue":"={{ $json._op }}","operator":{"type":"string","operation":"equals"},"rightValue":"tg"}],"combinator":"and"}},{"renameOutput":true,"outputKey":"user","conditions":{"options":{"caseSensitive":true,"leftValue":"","typeValidation":"loose"},"conditions":[{"leftValue":"={{ $json._op }}","operator":{"type":"string","operation":"equals"},"rightValue":"user"}],"combinator":"and"}}] }, options: {} }
   }
 });
@@ -189,7 +211,7 @@ const telegramApi = node({
   version: 4.4,
   config: {
     name: 'Telegram API',
-    position: [2400, 200],
+    position: [2640, 200],
     onError: 'continueRegularOutput',
     parameters: {
       method: 'POST',
@@ -208,7 +230,7 @@ const saveUser = node({
   version: 1.1,
   config: {
     name: 'Save User',
-    position: [2400, 400],
+    position: [2640, 400],
     parameters: {
       resource: 'row',
       operation: 'upsert',
@@ -221,8 +243,8 @@ const saveUser = node({
 });
 
 const note = sticky(
-  '## 🤖 Takhfif Finder — Telegram Bot\n@takhfif_finder_bot webhook (secured with Telegram\'s secret token header).\n1. **Understand Update** (Engine `botParse`): command / button / free text → view + data-table query\n2. Load the user, the crawl stats and the matching coupons\n3. **Build Reply** (Engine `botReply`): menus, coupon cards with copy buttons, alerts on/off\n4. Call the Bot API and save the user',
-  [telegramWebhook, makeParse, understand, loadUser, loadStats, needCoupons, queryCoupons, makeReply, buildReply, routeReply],
+  '## 🤖 Takhfif Finder — Telegram Bot\n@takhfif_finder_bot webhook (secured with Telegram\'s secret token header).\n1. **Understand Update** (Engine `botParse`): command / button / free text → view + data-table query\n2. **Check Membership** of the required channel (getChatMember; the bot must be an admin there)\n3. Load the user, the crawl stats and the matching coupons\n4. **Build Reply** (Engine `botReply`): join gate for non-members, menus, coupon cards with copy buttons, alerts on/off\n5. Call the Bot API and save the user',
+  [telegramWebhook, makeParse, understand, checkMember, loadUser, loadStats, needCoupons, queryCoupons, makeReply, buildReply, routeReply],
   { color: 6 }
 );
 
@@ -230,6 +252,7 @@ export default workflow('takhfif-bot', 'Takhfif Finder — Telegram Bot')
   .add(telegramWebhook)
   .to(makeParse)
   .to(understand)
+  .to(checkMember)
   .to(loadUser)
   .to(loadStats)
   .to(needCoupons
