@@ -181,10 +181,12 @@ check('joining the bot does not save the user (the /start message does); blockin
   assert.strictEqual(blocked.blocked, true);
 });
 
-check('brand logos: animated custom emoji in messages and on buttons, plain emoji outside the pack', async () => {
+check('brand logos: animated custom emoji in messages and on buttons, the general pack outside the brand pack', async () => {
   const SNAPP = '5024117283887253544';
   const SNAPP_FOOD = '5026569873422026474';
   const TAPSI = '5024281901393776065';
+  const SEARCH = '5188311512791393083'; // 🔎 from the general animated pack
+  const MAILBOX = '5350421256627838238'; // 📬, the closest the general pack has to 📦
   const tag = (id, e) => '<tg-emoji emoji-id="' + id + '">' + e + '</tg-emoji>';
   const stats = { value: JSON.stringify({ total: 20, codes: 10, sources: {}, brands: {
     snapp: { fa: 'اسنپ', n: 10, c: 5, s: { food: 3, box: 1 } }, tapsi: { fa: 'تپسی', n: 4, c: 2, s: { garage: 4 } },
@@ -206,31 +208,99 @@ check('brand logos: animated custom emoji in messages and on buttons, plain emoj
   const snapp = kb.find((b) => b.callback_data === 'b:snapp');
   assert.deepStrictEqual([snapp.icon_custom_emoji_id, snapp.text], [SNAPP, 'اسنپ (۱۰)']);
   const torob = kb.find((b) => b.callback_data === 'b:torob');
-  assert.ok(!torob.icon_custom_emoji_id && torob.text === '🔎 ترب (۲)', 'brands outside the pack keep their emoji');
-  // Brand page: logo in the title; service buttons with their own logo, or their plain emoji.
+  assert.deepStrictEqual([torob.icon_custom_emoji_id, torob.text], [SEARCH, 'ترب (۲)'], 'brands outside the brand pack: their emoji, animated');
+  // Brand page: logo in the title; service buttons with their own logo, or their emoji animated.
   let m = await reply(cb('b:snapp'));
   assert.ok(m.text.startsWith(tag(SNAPP, '🚕') + ' <b>کدهای تخفیف اسنپ</b>'));
   kb = m.reply_markup.inline_keyboard.flat();
   assert.strictEqual(kb.find((b) => b.callback_data === 's:snapp:food:0').icon_custom_emoji_id, SNAPP_FOOD);
-  assert.strictEqual(kb.find((b) => b.callback_data === 's:snapp:box:0').text, '📦 اسنپ‌باکس و پیک/وانت (۱)');
+  const box = kb.find((b) => b.callback_data === 's:snapp:box:0');
+  assert.deepStrictEqual([box.icon_custom_emoji_id, box.text], [MAILBOX, 'اسنپ‌باکس و پیک/وانت (۱)']);
   // All of a brand's codes: each coupon headed by its service.
   m = await reply(cb('s:snapp:*:0'));
   assert.ok(m.text.includes('<b>۱) ' + tag(SNAPP_FOOD, '🍔') + ' اسنپ‌فود | کد فود</b>'));
-  assert.ok(m.text.includes('<b>۲) 📦 اسنپ‌باکس و پیک/وانت | کد باکس</b>'));
-  // Mixed lists (hot, newest, search, alerts): the service's logo, else the brand's, else its plain emoji.
+  assert.ok(m.text.includes('<b>۲) ' + tag(MAILBOX, '📬') + ' اسنپ‌باکس و پیک/وانت | کد باکس</b>'));
+  // Mixed lists (hot, newest, search, alerts): the service's logo, else the brand's, else its emoji animated.
   m = await reply(cb('t:0'));
   assert.ok(m.text.includes(tag(SNAPP_FOOD, '🍔') + ' اسنپ | کد فود'));
   assert.ok(m.text.includes(tag(SNAPP, '🚕') + ' اسنپ | کد باکس'));
-  assert.ok(m.text.includes('🔎 ترب | کد ترب'));
+  assert.ok(m.text.includes(tag(SEARCH, '🔎') + ' ترب | کد ترب'));
   const alert = (await runEngine({ op: 'alerts', rows: rows.slice(0, 1), users: [{ user_id: '1', subs: 'snapp:*' }] }))[0];
   assert.ok(alert.payload.text.includes(tag(SNAPP_FOOD, '🍔') + ' اسنپ | کد فود'));
   // My alerts, the super-apps row under categories, and the channel gate's welcome.
   m = await reply(cb('my'));
   assert.ok(m.text.includes('• ' + tag(SNAPP_FOOD, '🍔') + ' اسنپ‌فود') && m.text.includes('• ' + tag(TAPSI, '🚖') + ' همه‌ی تپسی'));
   kb = (await reply(cb('cats'))).reply_markup.inline_keyboard.flat();
-  assert.deepStrictEqual(kb.filter((b) => b.icon_custom_emoji_id).map((b) => b.text), ['اسنپ', 'تپسی', 'دیجی‌کالا']);
+  assert.deepStrictEqual(kb.filter((b) => /^b:/.test(b.callback_data)).map((b) => [b.icon_custom_emoji_id, b.text]), [[SNAPP, 'اسنپ'], [TAPSI, 'تپسی'], ['5026037649664641195', 'دیجی‌کالا']]);
   m = await reply(msg('/start'), { channel: '@GozarNetPro', check: { ok: true, result: { status: 'left' } } });
   assert.ok(m.text.includes(tag(SNAPP, '🚕') + ' اسنپ، ' + tag(TAPSI, '🚖') + ' تپسی، '));
+});
+
+check('every emoji the bot shows is animated, except in popups and inside codes', async () => {
+  const EMOJI = /\p{Extended_Pictographic}/u;
+  const stats = { value: JSON.stringify({ total: 30, codes: 20, updatedAt: new Date().toISOString(), sources: { offch: 20, mopon: 10 }, run: { fetched: 50, created: 3, errors: 0 },
+    brands: { snapp: { fa: 'اسنپ', n: 10, c: 5, s: { food: 3, box: 1 } }, torob: { fa: 'ترب', n: 2, c: 1, s: {} }, x_shop: { fa: 'شاپ', cat: 'fashion', n: 12, s: {} } } }) };
+  const rows = [
+    { ckey: 'snapp|F1', brand: 'snapp', service: 'food', brand_fa: 'اسنپ', title: 'کد فود 🔥', code: 'F1', alt_codes: 'F2', kind: 'code', hidden: true, sources: 'offch,mopon',
+      discount: '۵۰٪', expires_at: new Date(Date.now() + 5 * 3600e3).toISOString(), descr: 'توضیح', link: 'https://snappfood.ir', active: true, score: 90 },
+    { ckey: 'torob|T1', brand: 'torob', service: '', brand_fa: 'ترب', category: 'shop', title: 'آفر ترب', kind: 'offer', sources: 'offch', src_url: 'https://x.ir', active: true, score: 70 },
+    { ckey: 'x_shop|U1', brand: 'x_shop', service: '', brand_fa: 'شاپ', category: 'fashion', title: 'کد اختصاصی', kind: 'unique', sources: 'mopon', link: 'https://y.ir', active: true, score: 60 },
+  ];
+  const msg = (text) => ({ message: { message_id: 1, from: { id: 5, first_name: 'Ali' }, chat: { id: 5, type: 'private' }, text } });
+  const cb = (data) => ({ callback_query: { id: 'c1', from: { id: 5, first_name: 'Ali' }, data, message: { message_id: 9, chat: { id: 5, type: 'private' } } } });
+  const views = [msg('/start'), msg('/help'), msg('/stats'), msg('/alerts'), msg('ترب'), cb('b:snapp'), cb('s:snapp:*:0'), cb('t:0'), cb('n:0'), cb('a:0'), cb('cats'), cb('c:fashion:0'), cb('q'), cb('f:snapp:*:b')];
+  const gate = { channel: '@GozarNetPro', check: { ok: true, result: { status: 'left' } } };
+  const outs = [];
+  for (const v of views) {
+    const p = (await runEngine({ op: 'botParse', update: v }))[0];
+    outs.push(...await runEngine({ op: 'botReply', p, user: { user_id: '5', subs: 'snapp:food' }, stats, rows: p.q.need ? rows : [] }));
+  }
+  const gp = (await runEngine({ op: 'botParse', update: msg('/start') }))[0];
+  outs.push(...await runEngine({ op: 'botReply', p: gp, user: {}, stats, rows: [], gate }));
+  outs.push(...await runEngine({ op: 'alerts', rows, users: [{ user_id: '1', subs: 'snapp:*,torob:*' }] }));
+  const messages = outs.filter((o) => o.payload && o.payload.parse_mode === 'HTML');
+  assert.ok(messages.length >= views.length + 2);
+  for (const o of messages) {
+    const left = o.payload.text.replace(/<tg-emoji [^>]*>[^<]*<\/tg-emoji>/g, '').replace(/<code>[^<]*<\/code>/g, '').replace(/<[^>]*>/g, '');
+    assert.ok(!EMOJI.test(left), 'plain emoji left in: ' + left.slice(0, 200));
+    for (const b of o.payload.reply_markup.inline_keyboard.flat()) {
+      assert.ok(!EMOJI.test(b.text) && b.icon_custom_emoji_id, 'button: ' + b.text);
+    }
+  }
+  const hot = messages.find((o) => o.payload.text.includes('کد فود')).payload;
+  assert.ok(hot.text.includes('<code>F1</code>'), 'codes stay untouched');
+  assert.ok(hot.text.includes('کد فود <tg-emoji emoji-id="5420315771991497307">🔥</tg-emoji>'), 'emoji in a coupon title too');
+  // Popups are plain text in Telegram.
+  const toast = outs.find((o) => o.method === 'answerCallbackQuery' && o.payload.text);
+  assert.ok(toast && EMOJI.test(toast.payload.text) && !toast.payload.text.includes('<tg-emoji'));
+});
+
+check("a message stays within Telegram's 100 entities", async () => {
+  const { load } = require('./harness.js');
+  const ev = load(['bot/emoji.js']);
+  const html = '<b>x</b> ' + '🔥 '.repeat(150) + '<code>🔥</code>';
+  const out = ev('animateHtml(' + JSON.stringify(html) + ')');
+  assert.strictEqual((out.match(/<tg-emoji /g) || []).length, 98, '100 minus <b> and <code>');
+  assert.ok(out.endsWith('🔥 <code>🔥</code>'));
+});
+
+check('every emoji in the bot texts and the catalog has an animated version', async () => {
+  const { load } = require('./harness.js');
+  const ev = load(['lib/text.js', 'lib/catalog.js', 'bot/logos.js', 'bot/emoji.js']);
+  const missing = ev(`(() => {
+    const out = [];
+    const need = (e, where) => { if (!animatedEmoji(e)) out.push(where + ' ' + e); };
+    for (const c of CATEGORIES) need(c.emoji, c.id);
+    for (const b of BRANDS) {
+      if (!customEmoji(b.id)) need(b.emoji, b.id);
+      for (const s of b.services || []) if (!customEmoji(b.id, s.id)) need(s.emoji, b.id + ':' + s.id);
+    }
+    return out;
+  })()`);
+  // Texts of bot.js; 🔒 only appears in a popup, which can't show custom emoji.
+  const src = fs.readFileSync(path.join(root, 'src', 'bot', 'bot.js'), 'utf8').replace(/\\ufe0f/g, '');
+  for (const e of new Set(src.match(/\p{Extended_Pictographic}/gu))) if (e !== '🔒' && !ev('animatedEmoji(' + JSON.stringify(e) + ')')) missing.push('bot.js ' + e);
+  assert.strictEqual(missing.join(', '), '', 'no animated version');
 });
 
 if (fixtures && fs.existsSync(fixtures)) {

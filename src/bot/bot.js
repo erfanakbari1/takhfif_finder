@@ -1,5 +1,5 @@
 // Telegram bot brain: turns an update + table data into Telegram API calls.
-// Depends on text.js + catalog.js + logos.js. Pure functions, easy to test outside n8n.
+// Depends on text.js + catalog.js + logos.js + emoji.js. Pure functions, easy to test outside n8n.
 
 const BOT_USERNAME = 'takhfif_finder_bot';
 const PAGE = 5;          // coupons per page
@@ -151,9 +151,9 @@ function sortRows(rows) {
 function pager(prefix, page, pages) {
   if (pages <= 1) return [];
   const row = [];
-  if (page > 0) row.push({ text: '⬅\ufe0f قبلی', callback_data: prefix + (page - 1) });
-  row.push({ text: '📄 ' + fa(page + 1) + ' از ' + fa(pages), callback_data: 'noop' });
-  if (page < pages - 1) row.push({ text: 'بعدی ➡\ufe0f', callback_data: prefix + (page + 1) });
+  if (page > 0) row.push({ text: '👈 قبلی', callback_data: prefix + (page - 1) });
+  row.push({ text: '📖 ' + fa(page + 1) + ' از ' + fa(pages), callback_data: 'noop' });
+  if (page < pages - 1) row.push({ text: 'بعدی 👉', callback_data: prefix + (page + 1) });
   return [row];
 }
 
@@ -171,7 +171,7 @@ function couponBlock(r, i, now, name, logo) {
   const head = (name ? (logo ? logoHtml(logo) + ' ' : '') + esc(name) + ' | ' : '') + esc(r.title);
   lines.push('<b>' + fa(i) + ') ' + head + '</b>');
   if (r.kind === 'code' && r.code) {
-    lines.push('🎟 کد: <code>' + esc(r.code) + '</code>' + (r.hidden ? '  🕵\ufe0f <i>کد مخفی</i>' : ''));
+    lines.push('🎟 کد: <code>' + esc(r.code) + '</code>' + (r.hidden ? '  🤫 <i>کد مخفی</i>' : ''));
     if (r.alt_codes) lines.push('🎟 کدهای جایگزین: ' + r.alt_codes.split(',').map((c) => '<code>' + esc(c) + '</code>').join(' ، '));
   } else if (r.kind === 'unique') {
     lines.push('🔐 کد اختصاصی — با لینک زیر کد مخصوص خودت رو بگیر');
@@ -185,7 +185,7 @@ function couponBlock(r, i, now, name, logo) {
   const extra = [r.conditions, r.descr].filter(Boolean).join(' — ');
   if (extra) lines.push('📝 ' + esc(oneLine(extra, 170)));
   const srcN = String(r.sources || '').split(',').filter(Boolean).length;
-  const trust = srcN > 1 ? '🛡 تأیید از ' + fa(srcN) + ' منبع' : '🔎 ' + esc(SOURCE_FA[String(r.sources || '').split(',')[0]] || 'منبع معتبر');
+  const trust = srcN > 1 ? '✔\ufe0f تأیید از ' + fa(srcN) + ' منبع' : '🔎 ' + esc(SOURCE_FA[String(r.sources || '').split(',')[0]] || 'منبع معتبر');
   const link = r.link || r.src_url;
   const label = r.link ? (r.kind === 'code' ? 'لینک خرید' : 'دریافت آفر') : 'منبع';
   lines.push(trust + (link ? ' · <a href="' + esc(link) + '">🔗 ' + label + '</a>' : ''));
@@ -195,7 +195,7 @@ function couponBlock(r, i, now, name, logo) {
 function copyButtons(rows) {
   const btns = [];
   for (const r of rows) {
-    if (r.kind === 'code' && r.code) btns.push({ text: '📋 ' + r.code.slice(0, 24), copy_text: { text: r.code } });
+    if (r.kind === 'code' && r.code) btns.push({ text: '📎 ' + r.code.slice(0, 24), copy_text: { text: r.code } });
     else if (r.link || r.src_url) btns.push({ text: '🔗 ' + (r.kind === 'unique' ? 'دریافت کد ' : 'آفر ') + oneLine(r.brand_fa || '', 14), url: r.link || r.src_url });
   }
   return pairs(btns);
@@ -212,8 +212,8 @@ function viewHome(ctx, data, now) {
     '',
     'سلام ' + name + '! 👋',
     '✅ <b>' + fa(total) + '</b> کد تخفیف و آفر فعال' + (st.codes ? ' (<b>' + fa(st.codes) + '</b> کد آماده\u200cی کپی)' : ''),
-    '🌐 جمع\u200cآوری لحظه\u200cای از <b>' + fa(srcCount || 10) + '</b> منبع + کانال\u200cهای اختصاصی',
-    st.updatedAt ? '🕒 آخرین به\u200cروزرسانی: ' + relTime(st.updatedAt, now) : '',
+    '🌍 جمع\u200cآوری لحظه\u200cای از <b>' + fa(srcCount || 10) + '</b> منبع + کانال\u200cهای اختصاصی',
+    st.updatedAt ? '⏰ آخرین به\u200cروزرسانی: ' + relTime(st.updatedAt, now) : '',
     '',
     '👇 برندت رو انتخاب کن، یا فقط اسمش رو تایپ کن (مثلاً <i>اسنپ فود</i>)',
   ].filter((l, i, a) => l !== '' || a[i - 1] !== '').join('\n');
@@ -246,7 +246,7 @@ function viewBrand(ctx, data, route, now) {
   ].join('\n');
   const btns = b.services.map((s) => logoButton(svcLogo(b.id, s), s.fa + ' (' + (b.s[s.id] ? fa(b.s[s.id]) : '۰') + ')', { callback_data: 's:' + b.id + ':' + s.id + ':0' }));
   const kb = pairs(btns);
-  kb.push([{ text: '📋 همه کدهای ' + b.fa + ' (' + fa(b.n) + ')', callback_data: 's:' + b.id + ':*:0' }]);
+  kb.push([{ text: '🗂 همه کدهای ' + b.fa + ' (' + fa(b.n) + ')', callback_data: 's:' + b.id + ':*:0' }]);
   const on = isFollowing(data.user, b.id, '*');
   kb.push([{ text: on ? '🔕 لغو اعلان کدهای جدید ' + b.fa : '🔔 کد جدید ' + b.fa + ' اومد خبرم کن', callback_data: 'f:' + b.id + ':*:b' }]);
   kb.push([HOME_BTN]);
@@ -272,13 +272,13 @@ function viewList(ctx, data, route, now) {
       const sv = !svc && b.services && r.service ? serviceOf(b.id, r.service) : null;
       parts.push(couponBlock(r, page * PAGE + i + 1, now, sv ? sv.fa : '', sv ? svcLogo(b.id, sv) : null), '');
     });
-    parts.push('💡 روی کد بزن یا از دکمه\u200cهای 📋 زیر استفاده کن تا کپی بشه.');
+    parts.push('💡 روی کد بزن یا از دکمه\u200cهای 📎 زیر استفاده کن تا کپی بشه.');
   }
   const kb = copyButtons(slice);
   kb.push(...pager('s:' + b.id + ':' + (svc ? svc.id : '*') + ':', page, pages));
   const on = isFollowing(data.user, b.id, svc ? svc.id : '*');
   kb.push([{ text: on ? '🔕 لغو اعلان' : '🔔 کد جدید اومد خبرم کن', callback_data: 'f:' + b.id + ':' + (svc ? svc.id : '*') + ':l' }]);
-  const back = b.services ? { text: '🔙 ' + b.fa, callback_data: 'b:' + b.id } : { text: '🔙 فروشگاه\u200cها', callback_data: 'a:0' };
+  const back = b.services ? { text: '👈 ' + b.fa, callback_data: 'b:' + b.id } : { text: '👈 فروشگاه\u200cها', callback_data: 'a:0' };
   kb.push([back, HOME_BTN]);
   return { text: parts.join('\n'), kb };
 }
@@ -341,7 +341,7 @@ function viewCat(ctx, data, route) {
   const slice = ids.slice(page * STORES_PAGE, page * STORES_PAGE + STORES_PAGE);
   const kb = pairs(slice.map((id) => { const b = brandInfo(id, data.stats); return logoButton(brandLogo(b), oneLine(b.fa, 18) + ' (' + fa(b.n) + ')', { callback_data: 'b:' + id }); }));
   kb.push(...pager('c:' + cat.id + ':', page, pages));
-  kb.push([{ text: '🔙 دسته\u200cبندی\u200cها', callback_data: 'cats' }, HOME_BTN]);
+  kb.push([{ text: '👈 دسته\u200cبندی\u200cها', callback_data: 'cats' }, HOME_BTN]);
   return { text: cat.emoji + ' <b>' + esc(cat.fa) + '</b>\n' + fa(ids.length) + ' برند فعال 👇', kb };
 }
 
@@ -405,7 +405,7 @@ function viewHelp() {
     '🤖 این ربات هر ۲ ساعت بیش از ۱۰ سایت کد تخفیف (موپن، کانال تخفیف، آفردیلی، تخفیفه، آفرجو، استورکد، بودجه، تپسی\u200cتخفیف، ایرانیکارت و ...) به\u200cعلاوه\u200cی کانال\u200cهای تلگرامی اختصاصی رو می\u200cگرده، کدهای مخفی پشت دکمه\u200cی «نمایش کد» رو استخراج می\u200cکنه، تکراری\u200cها رو ادغام می\u200cکنه و فقط کدهای معتبر رو نشونت میده.',
     '',
     '🧠 <b>امتیاز هوشمند:</b> کدهایی که در چند منبع تأیید شدن، تخفیف بیشتری دارن و تازه\u200cترن بالاتر میان.',
-    '📋 <b>کپی با یک لمس:</b> روی کد یا دکمه\u200cی 📋 بزن.',
+    '📎 <b>کپی با یک لمس:</b> روی کد یا دکمه\u200cی 📎 بزن.',
     '🔔 <b>اعلان:</b> برای هر برند/سرویس دکمه\u200cی «خبرم کن» رو بزن؛ کد جدید که پیدا بشه برات می\u200cفرستم.',
     '🔎 <b>جستجو:</b> کافیه اسم برند یا سرویس رو بنویسی: «اسنپ فود»، «تپسی گاراژ»، «دیجی کالا جت»، «فیلیمو»...',
     '',
@@ -416,15 +416,13 @@ function viewHelp() {
 
 function viewStats(ctx, data, now) {
   const st = data.stats || {};
-  const parts = ['📊 <b>آمار تخفیف\u200cیاب</b>', '', '✅ موارد فعال: ' + fa(st.total || 0) + ' (کد: ' + fa(st.codes || 0) + ')', '🏷 برندها: ' + fa(Object.keys(st.brands || {}).length), st.updatedAt ? '🕒 آخرین crawl: ' + relTime(st.updatedAt, now) : '', '', '<b>سهم منابع:</b>'];
+  const parts = ['📊 <b>آمار تخفیف\u200cیاب</b>', '', '✅ موارد فعال: ' + fa(st.total || 0) + ' (کد: ' + fa(st.codes || 0) + ')', '🛍 برندها: ' + fa(Object.keys(st.brands || {}).length), st.updatedAt ? '⏰ آخرین crawl: ' + relTime(st.updatedAt, now) : '', '', '<b>سهم منابع:</b>'];
   for (const [s, n] of Object.entries(st.sources || {}).sort((a, b) => b[1] - a[1])) parts.push('• ' + esc(SOURCE_FA[s] || s) + ': ' + fa(n));
   const run = st.run || {};
-  if (run.fetched) parts.push('', '🌐 آخرین اجرا: ' + fa(run.fetched) + ' درخواست، ' + fa(run.created || 0) + ' مورد جدید، ' + fa(run.errors || 0) + ' خطا');
+  if (run.fetched) parts.push('', '🌍 آخرین اجرا: ' + fa(run.fetched) + ' درخواست، ' + fa(run.created || 0) + ' مورد جدید، ' + fa(run.errors || 0) + ' خطا');
   return { text: parts.filter((x) => x !== null).join('\n'), kb: [[HOME_BTN]] };
 }
 
-// ---- Main -----------------------------------------------------------------------------------------
-// data: { stats, user, rows }. Returns { calls: [{method, payload}], user: {...} | null }.
 // ---- Channel gate ---------------------------------------------------------------------------------
 // gate: { channel: '@name', check: raw getChatMember response }. The bot must be an admin of the channel for
 // Telegram to answer; any failed check counts as 'off' so a misconfiguration never locks users out.
@@ -467,10 +465,10 @@ function viewJoin(ctx, data, route, channel) {
   const text = [
     '🎁 <b>' + hi + 'به تخفیف\u200cیاب خوش اومدی</b>',
     '',
-    '🔓 ' + (stats.total ? '<b>' + fa(stats.total) + '</b> کد تخفیف و آفر فعال' : 'همه\u200cی کدهای تخفیف فعال') +
+    '🔑 ' + (stats.total ? '<b>' + fa(stats.total) + '</b> کد تخفیف و آفر فعال' : 'همه\u200cی کدهای تخفیف فعال') +
       ' ' + big3 + ' و ده\u200cها فروشگاه دیگه منتظرته!',
     '',
-    '📢 برای استفاده از ربات، فقط کافیه عضو کانال ما بشی:',
+    '📣 برای استفاده از ربات، فقط کافیه عضو کانال ما بشی:',
     '👈 <b>@' + esc(handle) + '</b>',
     '',
     '✅ عضویت رایگانه و چند ثانیه بیشتر طول نمی\u200cکشه',
@@ -479,13 +477,21 @@ function viewJoin(ctx, data, route, channel) {
     '👇 روی «عضویت در کانال» بزن، عضو شو و بعد «عضو شدم» رو بزن',
   ].join('\n');
   const kb = [
-    [{ text: '📢 عضویت در کانال ' + handle, url: 'https://t.me/' + handle }],
+    [{ text: '📣 عضویت در کانال ' + handle, url: 'https://t.me/' + handle }],
     [{ text: '✅ عضو شدم، بزن بریم!', callback_data: resumeData(route) }],
   ];
   return { text, kb };
 }
 
+// ---- Main -----------------------------------------------------------------------------------------
+// data: { stats, user, rows, gate }. Returns { calls: [{method, payload}], user: {...} | null },
+// with every emoji animated (see emoji.js).
 function buildReply(ctx, route, data, nowMs) {
+  const rep = replyCalls(ctx, route, data, nowMs);
+  return { calls: rep.calls.map(animateCall), user: rep.user };
+}
+
+function replyCalls(ctx, route, data, nowMs) {
   const now = nowMs || Date.now();
   const calls = [];
   const nowIso = new Date(now).toISOString();
@@ -587,7 +593,7 @@ function buildAlerts(newRows, users, nowMs) {
     parts.push('🔕 مدیریت اعلان\u200cها: /alerts');
     const kb = copyButtons(hits);
     kb.push([{ text: '🏠 منوی تخفیف\u200cیاب', callback_data: 'h' }]);
-    out.push({ method: 'sendMessage', payload: { chat_id: u.user_id, text: parts.join('\n'), parse_mode: 'HTML', link_preview_options: { is_disabled: true }, reply_markup: { inline_keyboard: kb } } });
+    out.push(animateCall({ method: 'sendMessage', payload: { chat_id: u.user_id, text: parts.join('\n'), parse_mode: 'HTML', link_preview_options: { is_disabled: true }, reply_markup: { inline_keyboard: kb } } }));
   }
   return out;
 }

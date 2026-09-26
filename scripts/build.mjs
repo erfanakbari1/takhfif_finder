@@ -29,7 +29,7 @@ const SECRETS = { TELEGRAM_BOT_TOKEN: '__TELEGRAM_BOT_TOKEN__', WEBHOOK_SECRET: 
 export const BUNDLES = {
   'crawler-engine': ['lib/text.js', 'crawler/sources.js', 'crawler/pipeline.js', 'main/crawler-engine.js'],
   'merge-engine': ['lib/text.js', 'lib/catalog.js', 'crawler/merge.js', 'crawler/pipeline.js', 'main/merge-engine.js'],
-  'bot-engine': ['lib/text.js', 'lib/catalog.js', 'bot/logos.js', 'bot/bot.js', 'main/bot-engine.js'],
+  'bot-engine': ['lib/text.js', 'lib/catalog.js', 'bot/logos.js', 'bot/emoji.js', 'bot/bot.js', 'main/bot-engine.js'],
 };
 
 function source(rel) {

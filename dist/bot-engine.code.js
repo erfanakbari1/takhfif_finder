@@ -595,7 +595,7 @@ const CUSTOM_EMOJI = {
   'snapp:shop': ['5024260469506967822', '🛍'],
   'snapp:pay': ['5026576363117611069', '💸'],
   'snapp:doctor': ['5024096345921686715', '💊'],
-  'snapp:trip': ['5024134661324933364', '✈️'],
+  'snapp:trip': ['5024134661324933364', '✈\ufe0f'],
   tapsi: ['5024281901393776065', '🚖'],
   'tapsi:ride': ['5024281901393776065', '🚖'],
   'tapsi:food': ['5024104394690398933', '🍕'],
@@ -612,7 +612,7 @@ const CUSTOM_EMOJI = {
   digistyle: ['5024028730251544497', '👕'],
   khanoumi: ['5023895156768638987', '💄'],
   okala: ['5026150504225310555', '🛒'],
-  azki: ['5023867548718860301', '🛡️'],
+  azki: ['5023867548718860301', '🛡\ufe0f'],
   basalam: ['5026575216361342706', '🧺'],
   irancell: ['5026085199247574773', '📱'],
   technolife: ['5024052206542785765', '💻'],
@@ -652,8 +652,101 @@ function logoButton(l, text, fields) {
   return Object.assign(l.id ? { text, icon_custom_emoji_id: l.id } : { text: l.e + ' ' + text }, fields);
 }
 
+// Every other emoji the bot shows, animated: the matching custom emoji from our second pack
+// (https://t.me/addemoji/RestrictedEmoji). Brand logos (logos.js) are placed while building a view; this pass then
+// turns each remaining plain emoji of a message into <tg-emoji> and a button's emoji into its icon_custom_emoji_id.
+// Popups (answerCallbackQuery), the command menu and the bot description are plain text, so they keep plain emoji.
+
+// Plain emoji (without U+FE0F) -> [custom_emoji_id, the sticker's own emoji].
+const ANIMATED_EMOJI = {
+  '⌛': ['5451646226975955576', '⌛\ufe0f'], '⌨': ['5472111548572900003', '⌨\ufe0f'], '⏰': ['5413704112220949842', '⏰'], '⏳': ['5451732530048802485', '⏳'],
+  '⚡': ['5431449001532594346', '⚡\ufe0f'], '✅': ['5427009714745517609', '✅'], '✈': ['5361600266225326825', '✈\ufe0f'], '✔': ['5188216731453103384', '✔\ufe0f'],
+  '❌': ['5465665476971471368', '❌'], '❓': ['5467666648263564704', '❓'], '⭐': ['5435957248314579621', '⭐\ufe0f'], '🆕': ['5361979468887893611', '🆕'],
+  '🌍': ['5399898266265475100', '🌍'], '🌿': ['5449850741667668411', '🌿'], '🍔': ['5372998546788194447', '🍔'], '🍕': ['5370980663778351052', '🍕'],
+  '🍿': ['5371081166013078244', '🍿'], '🎁': ['5199749070830197566', '🎁'], '🎉': ['5436040291507247633', '🎉'], '🎓': ['5375163339154399459', '🎓'],
+  '🎟': ['5377599075237502153', '🎟'], '🎫': ['5418010521309815154', '🎫'], '🎬': ['5375464961822695044', '🎬'], '🎭': ['5359441070201513074', '🎭'],
+  '🎮': ['5467583879948803288', '🎮'], '🎸': ['5465665777619204788', '🎸'], '🏕': ['5359636199155704118', '🏕'], '🏠': ['5465226866321268133', '🏠'],
+  '🏥': ['5264827875588077689', '🏥'], '🏦': ['5264895611517300926', '🏦'], '🏨': ['5265159812135546996', '🏨'], '🏫': ['5265002646397285605', '🏫'],
+  '👇': ['5470177992950946662', '👇'], '👈': ['5469735272017043817', '👈'], '👉': ['5471978009449731768', '👉'], '👋': ['5472055112702629499', '👋'],
+  '👜': ['5380056101473492248', '👜'], '👠': ['5372917273122054051', '👠'], '💄': ['5425119671437237058', '💄'], '💅': ['5373334855612375386', '💅'],
+  '💊': ['5433635625217563352', '💊'], '💍': ['5402100905883488232', '💍'], '💡': ['5472146462362048818', '💡'], '💪': ['5471883477219549006', '💪'],
+  '💰': ['5375296873982604963', '💰'], '💱': ['5471899089425667918', '💱'], '📂': ['5431721976769027887', '📂'], '📊': ['5431577498364158238', '📊'],
+  '📎': ['5377844313575150051', '📎'], '📖': ['5226512880362332956', '📖'], '📚': ['5373098009640836781', '📚'], '📝': ['5334882760735598374', '📝'],
+  '📣': ['5469903029144657419', '📣'], '📱': ['5407025283456835913', '📱'], '📲': ['5406809207947142040', '📲'], '📺': ['5373330964372004748', '📺'],
+  '🔎': ['5188311512791393083', '🔎'], '🔐': ['5472308992514464048', '🔐'], '🔑': ['5330115548900501467', '🔑'], '🔔': ['5242628160297641831', '🔔'],
+  '🔕': ['5244807637157029775', '🔕'], '🔗': ['5375129357373165375', '🔗'], '🔥': ['5420315771991497307', '🔥'], '🗂': ['5431736674147114227', '🗂'],
+  '🗣': ['5370765563226236970', '🗣'], '😕': ['5373272140499918095', '😕'], '🙏': ['5472189549473963781', '🙏'], '🚕': ['5445015510435502457', '🚕'],
+  '🚗': ['5445085952194124000', '🚗'], '🛍': ['5373052667671093676', '🛍'], '🛒': ['5431499171045581032', '🛒'], '🛫': ['5267341200255363810', '🛫'],
+  '🛬': ['5237795059369257857', '🛬'], '🤖': ['5372981976804366741', '🤖'], '🤫': ['5370930189322688800', '🤫'], '🥇': ['5280735858926822987', '🥇'],
+  '🥗': ['5264946326491134516', '🥗'], '🥫': ['5471958978449644934', '🥫'], '🧠': ['5237799019329105246', '🧠'], '🧰': ['5449428597922079323', '🧰'],
+  '🧱': ['5436275698664759373', '🧱'], '🩺': ['5359299744302639114', '🩺'], '🪙': ['5379600444098093058', '🪙'],
+  // Not in the pack: the closest emoji it has.
+  '🌐': ['5399898266265475100', '🌍'], '🌙': ['5465643984955120548', '🌛'], '🌶': ['5370940699107662298', '🌮'], '🎞': ['5375464961822695044', '🎬'],
+  '🎧': ['5188705588925702510', '🎶'], '🏡': ['5433645645376264953', '🏖'], '🏷': ['5373052667671093676', '🛍'], '👗': ['5372917273122054051', '👠'],
+  '👚': ['5472363448404809929', '👛'], '👟': ['5372917273122054051', '👠'], '💳': ['5264895611517300926', '🏦'], '💹': ['5373001317042101552', '📈'],
+  '📕': ['5226512880362332956', '📖'], '📡': ['5321304062715517873', '🛰'], '📦': ['5350421256627838238', '📬'], '📶': ['5407025283456835913', '📱'],
+  '🔌': ['5472146462362048818', '💡'], '🔧': ['5449428597922079323', '🧰'], '🔩': ['5449428597922079323', '🧰'], '🖥': ['5431376038628171216', '💻'],
+  '🚌': ['5418010521309815154', '🎫'], '🚖': ['5445015510435502457', '🚕'], '🚘': ['5445015510435502457', '🚕'], '🚙': ['5445085952194124000', '🚗'],
+  '🛏': ['5265159812135546996', '🏨'], '🛡': ['5426900601101374618', '🧿'], '🛵': ['5445284980978621387', '🚀'], '🥑': ['5264946326491134516', '🥗'],
+  '🥘': ['5359678839591018693', '🍽'], '🧺': ['5373052667671093676', '🛍'],
+};
+
+// Telegram keeps at most 100 entities (bold, links, code, custom emoji…) per message and silently drops the rest.
+const MAX_ENTITIES = 100;
+const EMOJI_SRC = '\\p{Extended_Pictographic}(?:\\ufe0f|\\p{Emoji_Modifier})?(?:\\u200d\\p{Extended_Pictographic}(?:\\ufe0f|\\p{Emoji_Modifier})?)*';
+const EMOJI_RE = new RegExp(EMOJI_SRC, 'gu');
+const LEAD_RE = new RegExp('^(' + EMOJI_SRC + ')\\s*', 'u');
+const TRAIL_RE = new RegExp('\\s*(' + EMOJI_SRC + ')$', 'u');
+const ENTITY_TAG_RE = /^<(?:b|strong|i|em|u|ins|s|strike|del|code|pre|a|tg-emoji|tg-spoiler|span|blockquote)\b/i;
+
+function animatedEmoji(e) {
+  return ANIMATED_EMOJI[e.replace(/\ufe0f/g, '')] || null;
+}
+
+// HTML message text: wrap each known emoji in <tg-emoji>, except inside <code>, <pre> (custom emoji can't go there)
+// and existing <tg-emoji>; stop before the message would pass Telegram's entity limit.
+function animateHtml(html) {
+  const parts = String(html == null ? '' : html).split(/(<[^>]*>)/);
+  let budget = MAX_ENTITIES - parts.filter((p, i) => i % 2 && ENTITY_TAG_RE.test(p)).length;
+  let skip = 0;
+  for (let i = 0; i < parts.length; i++) {
+    if (i % 2) {
+      const tag = /^<(\/?)(code|pre|tg-emoji)\b/i.exec(parts[i]);
+      if (tag) skip += tag[1] ? -1 : 1;
+      continue;
+    }
+    if (skip > 0 || !parts[i]) continue;
+    parts[i] = parts[i].replace(EMOJI_RE, (e) => {
+      const a = animatedEmoji(e);
+      if (!a || budget <= 0) return e;
+      budget--;
+      return '<tg-emoji emoji-id="' + a[0] + '">' + a[1] + '</tg-emoji>';
+    });
+  }
+  return parts.join('');
+}
+
+// Inline button: its leading (or trailing) emoji becomes the icon Telegram draws before the text.
+function animateButton(b) {
+  if (!b || b.icon_custom_emoji_id || typeof b.text !== 'string') return b;
+  const m = LEAD_RE.exec(b.text) || TRAIL_RE.exec(b.text);
+  const a = m && animatedEmoji(m[1]);
+  const text = m ? (b.text.slice(0, m.index) + b.text.slice(m.index + m[0].length)).trim() : '';
+  return a && text ? Object.assign({}, b, { text, icon_custom_emoji_id: a[0] }) : b;
+}
+
+// A Bot API call with its message text and buttons animated.
+function animateCall(c) {
+  const p = (c && c.payload) || {};
+  if (p.parse_mode !== 'HTML') return c;
+  const payload = Object.assign({}, p, { text: animateHtml(p.text) });
+  const kb = p.reply_markup && p.reply_markup.inline_keyboard;
+  if (kb) payload.reply_markup = Object.assign({}, p.reply_markup, { inline_keyboard: kb.map((row) => row.map(animateButton)) });
+  return Object.assign({}, c, { payload });
+}
+
 // Telegram bot brain: turns an update + table data into Telegram API calls.
-// Depends on text.js + catalog.js + logos.js. Pure functions, easy to test outside n8n.
+// Depends on text.js + catalog.js + logos.js + emoji.js. Pure functions, easy to test outside n8n.
 
 const BOT_USERNAME = 'takhfif_finder_bot';
 const PAGE = 5;          // coupons per page
@@ -805,9 +898,9 @@ function sortRows(rows) {
 function pager(prefix, page, pages) {
   if (pages <= 1) return [];
   const row = [];
-  if (page > 0) row.push({ text: '⬅\ufe0f قبلی', callback_data: prefix + (page - 1) });
-  row.push({ text: '📄 ' + fa(page + 1) + ' از ' + fa(pages), callback_data: 'noop' });
-  if (page < pages - 1) row.push({ text: 'بعدی ➡\ufe0f', callback_data: prefix + (page + 1) });
+  if (page > 0) row.push({ text: '👈 قبلی', callback_data: prefix + (page - 1) });
+  row.push({ text: '📖 ' + fa(page + 1) + ' از ' + fa(pages), callback_data: 'noop' });
+  if (page < pages - 1) row.push({ text: 'بعدی 👉', callback_data: prefix + (page + 1) });
   return [row];
 }
 
@@ -825,7 +918,7 @@ function couponBlock(r, i, now, name, logo) {
   const head = (name ? (logo ? logoHtml(logo) + ' ' : '') + esc(name) + ' | ' : '') + esc(r.title);
   lines.push('<b>' + fa(i) + ') ' + head + '</b>');
   if (r.kind === 'code' && r.code) {
-    lines.push('🎟 کد: <code>' + esc(r.code) + '</code>' + (r.hidden ? '  🕵\ufe0f <i>کد مخفی</i>' : ''));
+    lines.push('🎟 کد: <code>' + esc(r.code) + '</code>' + (r.hidden ? '  🤫 <i>کد مخفی</i>' : ''));
     if (r.alt_codes) lines.push('🎟 کدهای جایگزین: ' + r.alt_codes.split(',').map((c) => '<code>' + esc(c) + '</code>').join(' ، '));
   } else if (r.kind === 'unique') {
     lines.push('🔐 کد اختصاصی — با لینک زیر کد مخصوص خودت رو بگیر');
@@ -839,7 +932,7 @@ function couponBlock(r, i, now, name, logo) {
   const extra = [r.conditions, r.descr].filter(Boolean).join(' — ');
   if (extra) lines.push('📝 ' + esc(oneLine(extra, 170)));
   const srcN = String(r.sources || '').split(',').filter(Boolean).length;
-  const trust = srcN > 1 ? '🛡 تأیید از ' + fa(srcN) + ' منبع' : '🔎 ' + esc(SOURCE_FA[String(r.sources || '').split(',')[0]] || 'منبع معتبر');
+  const trust = srcN > 1 ? '✔\ufe0f تأیید از ' + fa(srcN) + ' منبع' : '🔎 ' + esc(SOURCE_FA[String(r.sources || '').split(',')[0]] || 'منبع معتبر');
   const link = r.link || r.src_url;
   const label = r.link ? (r.kind === 'code' ? 'لینک خرید' : 'دریافت آفر') : 'منبع';
   lines.push(trust + (link ? ' · <a href="' + esc(link) + '">🔗 ' + label + '</a>' : ''));
@@ -849,7 +942,7 @@ function couponBlock(r, i, now, name, logo) {
 function copyButtons(rows) {
   const btns = [];
   for (const r of rows) {
-    if (r.kind === 'code' && r.code) btns.push({ text: '📋 ' + r.code.slice(0, 24), copy_text: { text: r.code } });
+    if (r.kind === 'code' && r.code) btns.push({ text: '📎 ' + r.code.slice(0, 24), copy_text: { text: r.code } });
     else if (r.link || r.src_url) btns.push({ text: '🔗 ' + (r.kind === 'unique' ? 'دریافت کد ' : 'آفر ') + oneLine(r.brand_fa || '', 14), url: r.link || r.src_url });
   }
   return pairs(btns);
@@ -866,8 +959,8 @@ function viewHome(ctx, data, now) {
     '',
     'سلام ' + name + '! 👋',
     '✅ <b>' + fa(total) + '</b> کد تخفیف و آفر فعال' + (st.codes ? ' (<b>' + fa(st.codes) + '</b> کد آماده\u200cی کپی)' : ''),
-    '🌐 جمع\u200cآوری لحظه\u200cای از <b>' + fa(srcCount || 10) + '</b> منبع + کانال\u200cهای اختصاصی',
-    st.updatedAt ? '🕒 آخرین به\u200cروزرسانی: ' + relTime(st.updatedAt, now) : '',
+    '🌍 جمع\u200cآوری لحظه\u200cای از <b>' + fa(srcCount || 10) + '</b> منبع + کانال\u200cهای اختصاصی',
+    st.updatedAt ? '⏰ آخرین به\u200cروزرسانی: ' + relTime(st.updatedAt, now) : '',
     '',
     '👇 برندت رو انتخاب کن، یا فقط اسمش رو تایپ کن (مثلاً <i>اسنپ فود</i>)',
   ].filter((l, i, a) => l !== '' || a[i - 1] !== '').join('\n');
@@ -900,7 +993,7 @@ function viewBrand(ctx, data, route, now) {
   ].join('\n');
   const btns = b.services.map((s) => logoButton(svcLogo(b.id, s), s.fa + ' (' + (b.s[s.id] ? fa(b.s[s.id]) : '۰') + ')', { callback_data: 's:' + b.id + ':' + s.id + ':0' }));
   const kb = pairs(btns);
-  kb.push([{ text: '📋 همه کدهای ' + b.fa + ' (' + fa(b.n) + ')', callback_data: 's:' + b.id + ':*:0' }]);
+  kb.push([{ text: '🗂 همه کدهای ' + b.fa + ' (' + fa(b.n) + ')', callback_data: 's:' + b.id + ':*:0' }]);
   const on = isFollowing(data.user, b.id, '*');
   kb.push([{ text: on ? '🔕 لغو اعلان کدهای جدید ' + b.fa : '🔔 کد جدید ' + b.fa + ' اومد خبرم کن', callback_data: 'f:' + b.id + ':*:b' }]);
   kb.push([HOME_BTN]);
@@ -926,13 +1019,13 @@ function viewList(ctx, data, route, now) {
       const sv = !svc && b.services && r.service ? serviceOf(b.id, r.service) : null;
       parts.push(couponBlock(r, page * PAGE + i + 1, now, sv ? sv.fa : '', sv ? svcLogo(b.id, sv) : null), '');
     });
-    parts.push('💡 روی کد بزن یا از دکمه\u200cهای 📋 زیر استفاده کن تا کپی بشه.');
+    parts.push('💡 روی کد بزن یا از دکمه\u200cهای 📎 زیر استفاده کن تا کپی بشه.');
   }
   const kb = copyButtons(slice);
   kb.push(...pager('s:' + b.id + ':' + (svc ? svc.id : '*') + ':', page, pages));
   const on = isFollowing(data.user, b.id, svc ? svc.id : '*');
   kb.push([{ text: on ? '🔕 لغو اعلان' : '🔔 کد جدید اومد خبرم کن', callback_data: 'f:' + b.id + ':' + (svc ? svc.id : '*') + ':l' }]);
-  const back = b.services ? { text: '🔙 ' + b.fa, callback_data: 'b:' + b.id } : { text: '🔙 فروشگاه\u200cها', callback_data: 'a:0' };
+  const back = b.services ? { text: '👈 ' + b.fa, callback_data: 'b:' + b.id } : { text: '👈 فروشگاه\u200cها', callback_data: 'a:0' };
   kb.push([back, HOME_BTN]);
   return { text: parts.join('\n'), kb };
 }
@@ -995,7 +1088,7 @@ function viewCat(ctx, data, route) {
   const slice = ids.slice(page * STORES_PAGE, page * STORES_PAGE + STORES_PAGE);
   const kb = pairs(slice.map((id) => { const b = brandInfo(id, data.stats); return logoButton(brandLogo(b), oneLine(b.fa, 18) + ' (' + fa(b.n) + ')', { callback_data: 'b:' + id }); }));
   kb.push(...pager('c:' + cat.id + ':', page, pages));
-  kb.push([{ text: '🔙 دسته\u200cبندی\u200cها', callback_data: 'cats' }, HOME_BTN]);
+  kb.push([{ text: '👈 دسته\u200cبندی\u200cها', callback_data: 'cats' }, HOME_BTN]);
   return { text: cat.emoji + ' <b>' + esc(cat.fa) + '</b>\n' + fa(ids.length) + ' برند فعال 👇', kb };
 }
 
@@ -1059,7 +1152,7 @@ function viewHelp() {
     '🤖 این ربات هر ۲ ساعت بیش از ۱۰ سایت کد تخفیف (موپن، کانال تخفیف، آفردیلی، تخفیفه، آفرجو، استورکد، بودجه، تپسی\u200cتخفیف، ایرانیکارت و ...) به\u200cعلاوه\u200cی کانال\u200cهای تلگرامی اختصاصی رو می\u200cگرده، کدهای مخفی پشت دکمه\u200cی «نمایش کد» رو استخراج می\u200cکنه، تکراری\u200cها رو ادغام می\u200cکنه و فقط کدهای معتبر رو نشونت میده.',
     '',
     '🧠 <b>امتیاز هوشمند:</b> کدهایی که در چند منبع تأیید شدن، تخفیف بیشتری دارن و تازه\u200cترن بالاتر میان.',
-    '📋 <b>کپی با یک لمس:</b> روی کد یا دکمه\u200cی 📋 بزن.',
+    '📎 <b>کپی با یک لمس:</b> روی کد یا دکمه\u200cی 📎 بزن.',
     '🔔 <b>اعلان:</b> برای هر برند/سرویس دکمه\u200cی «خبرم کن» رو بزن؛ کد جدید که پیدا بشه برات می\u200cفرستم.',
     '🔎 <b>جستجو:</b> کافیه اسم برند یا سرویس رو بنویسی: «اسنپ فود»، «تپسی گاراژ»، «دیجی کالا جت»، «فیلیمو»...',
     '',
@@ -1070,15 +1163,13 @@ function viewHelp() {
 
 function viewStats(ctx, data, now) {
   const st = data.stats || {};
-  const parts = ['📊 <b>آمار تخفیف\u200cیاب</b>', '', '✅ موارد فعال: ' + fa(st.total || 0) + ' (کد: ' + fa(st.codes || 0) + ')', '🏷 برندها: ' + fa(Object.keys(st.brands || {}).length), st.updatedAt ? '🕒 آخرین crawl: ' + relTime(st.updatedAt, now) : '', '', '<b>سهم منابع:</b>'];
+  const parts = ['📊 <b>آمار تخفیف\u200cیاب</b>', '', '✅ موارد فعال: ' + fa(st.total || 0) + ' (کد: ' + fa(st.codes || 0) + ')', '🛍 برندها: ' + fa(Object.keys(st.brands || {}).length), st.updatedAt ? '⏰ آخرین crawl: ' + relTime(st.updatedAt, now) : '', '', '<b>سهم منابع:</b>'];
   for (const [s, n] of Object.entries(st.sources || {}).sort((a, b) => b[1] - a[1])) parts.push('• ' + esc(SOURCE_FA[s] || s) + ': ' + fa(n));
   const run = st.run || {};
-  if (run.fetched) parts.push('', '🌐 آخرین اجرا: ' + fa(run.fetched) + ' درخواست، ' + fa(run.created || 0) + ' مورد جدید، ' + fa(run.errors || 0) + ' خطا');
+  if (run.fetched) parts.push('', '🌍 آخرین اجرا: ' + fa(run.fetched) + ' درخواست، ' + fa(run.created || 0) + ' مورد جدید، ' + fa(run.errors || 0) + ' خطا');
   return { text: parts.filter((x) => x !== null).join('\n'), kb: [[HOME_BTN]] };
 }
 
-// ---- Main -----------------------------------------------------------------------------------------
-// data: { stats, user, rows }. Returns { calls: [{method, payload}], user: {...} | null }.
 // ---- Channel gate ---------------------------------------------------------------------------------
 // gate: { channel: '@name', check: raw getChatMember response }. The bot must be an admin of the channel for
 // Telegram to answer; any failed check counts as 'off' so a misconfiguration never locks users out.
@@ -1121,10 +1212,10 @@ function viewJoin(ctx, data, route, channel) {
   const text = [
     '🎁 <b>' + hi + 'به تخفیف\u200cیاب خوش اومدی</b>',
     '',
-    '🔓 ' + (stats.total ? '<b>' + fa(stats.total) + '</b> کد تخفیف و آفر فعال' : 'همه\u200cی کدهای تخفیف فعال') +
+    '🔑 ' + (stats.total ? '<b>' + fa(stats.total) + '</b> کد تخفیف و آفر فعال' : 'همه\u200cی کدهای تخفیف فعال') +
       ' ' + big3 + ' و ده\u200cها فروشگاه دیگه منتظرته!',
     '',
-    '📢 برای استفاده از ربات، فقط کافیه عضو کانال ما بشی:',
+    '📣 برای استفاده از ربات، فقط کافیه عضو کانال ما بشی:',
     '👈 <b>@' + esc(handle) + '</b>',
     '',
     '✅ عضویت رایگانه و چند ثانیه بیشتر طول نمی\u200cکشه',
@@ -1133,13 +1224,21 @@ function viewJoin(ctx, data, route, channel) {
     '👇 روی «عضویت در کانال» بزن، عضو شو و بعد «عضو شدم» رو بزن',
   ].join('\n');
   const kb = [
-    [{ text: '📢 عضویت در کانال ' + handle, url: 'https://t.me/' + handle }],
+    [{ text: '📣 عضویت در کانال ' + handle, url: 'https://t.me/' + handle }],
     [{ text: '✅ عضو شدم، بزن بریم!', callback_data: resumeData(route) }],
   ];
   return { text, kb };
 }
 
+// ---- Main -----------------------------------------------------------------------------------------
+// data: { stats, user, rows, gate }. Returns { calls: [{method, payload}], user: {...} | null },
+// with every emoji animated (see emoji.js).
 function buildReply(ctx, route, data, nowMs) {
+  const rep = replyCalls(ctx, route, data, nowMs);
+  return { calls: rep.calls.map(animateCall), user: rep.user };
+}
+
+function replyCalls(ctx, route, data, nowMs) {
   const now = nowMs || Date.now();
   const calls = [];
   const nowIso = new Date(now).toISOString();
@@ -1241,7 +1340,7 @@ function buildAlerts(newRows, users, nowMs) {
     parts.push('🔕 مدیریت اعلان\u200cها: /alerts');
     const kb = copyButtons(hits);
     kb.push([{ text: '🏠 منوی تخفیف\u200cیاب', callback_data: 'h' }]);
-    out.push({ method: 'sendMessage', payload: { chat_id: u.user_id, text: parts.join('\n'), parse_mode: 'HTML', link_preview_options: { is_disabled: true }, reply_markup: { inline_keyboard: kb } } });
+    out.push(animateCall({ method: 'sendMessage', payload: { chat_id: u.user_id, text: parts.join('\n'), parse_mode: 'HTML', link_preview_options: { is_disabled: true }, reply_markup: { inline_keyboard: kb } } }));
   }
   return out;
 }
