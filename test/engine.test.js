@@ -263,6 +263,7 @@ check('every emoji the bot shows is animated, except in popups and inside codes'
   for (const o of messages) {
     const left = o.payload.text.replace(/<tg-emoji [^>]*>[^<]*<\/tg-emoji>/g, '').replace(/<code>[^<]*<\/code>/g, '').replace(/<[^>]*>/g, '');
     assert.ok(!EMOJI.test(left), 'plain emoji left in: ' + left.slice(0, 200));
+    assert.ok(!/<a [^>]*>[^<]*<tg-emoji/.test(o.payload.text), 'Telegram drops custom emoji inside links');
     for (const b of o.payload.reply_markup.inline_keyboard.flat()) {
       assert.ok(!EMOJI.test(b.text) && b.icon_custom_emoji_id, 'button: ' + b.text);
     }

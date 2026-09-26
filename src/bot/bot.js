@@ -188,7 +188,7 @@ function couponBlock(r, i, now, name, logo) {
   const trust = srcN > 1 ? '✔\ufe0f تأیید از ' + fa(srcN) + ' منبع' : '🔎 ' + esc(SOURCE_FA[String(r.sources || '').split(',')[0]] || 'منبع معتبر');
   const link = r.link || r.src_url;
   const label = r.link ? (r.kind === 'code' ? 'لینک خرید' : 'دریافت آفر') : 'منبع';
-  lines.push(trust + (link ? ' · <a href="' + esc(link) + '">🔗 ' + label + '</a>' : ''));
+  lines.push(trust + (link ? ' · 🔗 <a href="' + esc(link) + '">' + label + '</a>' : ''));
   return lines.join('\n');
 }
 

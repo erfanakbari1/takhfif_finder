@@ -703,15 +703,15 @@ function animatedEmoji(e) {
   return ANIMATED_EMOJI[e.replace(/\ufe0f/g, '')] || null;
 }
 
-// HTML message text: wrap each known emoji in <tg-emoji>, except inside <code>, <pre> (custom emoji can't go there)
-// and existing <tg-emoji>; stop before the message would pass Telegram's entity limit.
+// HTML message text: wrap each known emoji in <tg-emoji>, except inside <code>, <pre>, links (Telegram drops custom
+// emoji there) and existing <tg-emoji>; stop before the message would pass Telegram's entity limit.
 function animateHtml(html) {
   const parts = String(html == null ? '' : html).split(/(<[^>]*>)/);
   let budget = MAX_ENTITIES - parts.filter((p, i) => i % 2 && ENTITY_TAG_RE.test(p)).length;
   let skip = 0;
   for (let i = 0; i < parts.length; i++) {
     if (i % 2) {
-      const tag = /^<(\/?)(code|pre|tg-emoji)\b/i.exec(parts[i]);
+      const tag = /^<(\/?)(code|pre|a|tg-emoji)\b/i.exec(parts[i]);
       if (tag) skip += tag[1] ? -1 : 1;
       continue;
     }
@@ -935,7 +935,7 @@ function couponBlock(r, i, now, name, logo) {
   const trust = srcN > 1 ? '✔\ufe0f تأیید از ' + fa(srcN) + ' منبع' : '🔎 ' + esc(SOURCE_FA[String(r.sources || '').split(',')[0]] || 'منبع معتبر');
   const link = r.link || r.src_url;
   const label = r.link ? (r.kind === 'code' ? 'لینک خرید' : 'دریافت آفر') : 'منبع';
-  lines.push(trust + (link ? ' · <a href="' + esc(link) + '">🔗 ' + label + '</a>' : ''));
+  lines.push(trust + (link ? ' · 🔗 <a href="' + esc(link) + '">' + label + '</a>' : ''));
   return lines.join('\n');
 }
 
