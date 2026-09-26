@@ -29,6 +29,10 @@
   - کدی که دیگر در هیچ منبعی دیده نشود، غیرفعال می‌شود.
   - هر کد شناخته‌شده حدوداً هر ۱۲ ساعت دوباره از منبعش خوانده می‌شود. به این ترتیب کد، تاریخ انقضا و توضیحات به‌روز می‌ماند و کدی که منبع منقضی اعلامش کند، کنار می‌رود.
 - **کپی با یک لمس**: هر کد یک دکمه‌ی `copy_text` دارد.
+- **لوگوی متحرک برندها**:
+  - کنار اسم اسنپ، تپسی، دیجی‌کالا، سرویس‌هایشان و برندهای معروف دیگر، لوگوی متحرک از پک اموجی خودمان ([IranianBrandsAnimated](https://t.me/addemoji/IranianBrandsAnimated)) می‌آید.
+  - در متن پیام‌ها با `<tg-emoji>` و روی دکمه‌ها با `icon_custom_emoji_id` نمایش داده می‌شود.
+  - تلگرام اموجی کاستوم ربات را فقط وقتی نشان می‌دهد که صاحب ربات تلگرام پریمیوم داشته باشد. جاهایی که نمایشش ممکن نیست (مثل نوتیفیکیشن)، اموجی معمولی همان استیکر دیده می‌شود.
 - **شرط عضویت در کانال**:
   - کسی که عضو کانال تعیین‌شده (`REQUIRED_CHANNEL`، الان [@GozarNetPro](https://t.me/GozarNetPro)) نباشد، یک پیام دعوت با دکمه‌ی «عضویت در کانال» و «عضو شدم» می‌بیند.
   - بعد از عضویت، دقیقاً همان بخشی که خواسته بود باز می‌شود؛ مثلاً لینک مستقیم اسنپ‌فود.
@@ -94,6 +98,7 @@ src/crawler/sources.js   برنامه‌ی خزش و پارسر هر منبع
 src/crawler/merge.js     نرمال‌سازی، ادغام، امتیازدهی، چرخه‌ی عمر ردیف‌ها، آمار
 src/crawler/pipeline.js  چانک‌بندی، برنامه‌ریزی reveal و تازه‌سازی دوره‌ای
 src/bot/bot.js           مسیریابی آپدیت‌ها، منوها، کارت کوپن‌ها، اعلان‌ها
+src/bot/logos.js         لوگوهای متحرک برندها (پک اموجی کاستوم) برای پیام‌ها و دکمه‌ها
 src/main/*-engine.js     دیسپچر هر Code node
 workflows/*.template.js  ورک‌فلوهای n8n (Workflow SDK) با placeholder
 scripts/build.mjs        بیلد باندل‌ها (خوانا + مینیفای) و ورک‌فلوها
@@ -122,6 +127,7 @@ npm test                 # بیلد + تست هر دو نسخه‌ی خوانا 
 
 - **افزودن برند یا منبع**:
   - برند: یک ورودی در `BRANDS` در `src/lib/catalog.js`.
+  - لوگوی متحرک: شناسه‌ی اموجی (`custom_emoji_id`، از متد `getStickerSet`) و اموجی خود استیکر در `CUSTOM_EMOJI` در `src/bot/logos.js`.
   - منبع: یک پارسر در `PARSERS` و چند job در `buildPlan` در `src/crawler/sources.js`، به‌علاوه‌ی یک fixture تست.
 
 > 🔐 توکن ربات و secret وب‌هوک فقط داخل نودهای n8n هستند. در `dist/` به‌جایشان `__TELEGRAM_BOT_TOKEN__` و `__WEBHOOK_SECRET__` آمده است. آدرس سرور و شناسه‌ها هم از `config.example.json` می‌آیند، نه از سرور واقعی.
@@ -131,7 +137,7 @@ npm test                 # بیلد + تست هر دو نسخه‌ی خوانا 
 **Takhfif Finder** is a Telegram bot ([@takhfif_finder_bot](https://t.me/takhfif_finder_bot)) that collects active discount codes for Iranian services and online shops (Snapp, Tapsi, Digikala and 120+ more brands) and serves them through clean Persian menus.
 
 - **Crawler:** every 2 hours it fetches 9 coupon sites and 9 public Telegram channels, reveals codes hidden behind "show code" buttons, merges the same code found on several sources, scores it, and re-checks known codes about twice a day so expired ones drop out. Requests are throttled, and single-use codes are never consumed.
-- **Bot:** brand and service menus (Snapp Food, Tapsi Garage, Digikala Jet, …), Persian search, one-tap copy buttons, and alerts when a followed brand gets a new code. Optionally, users must join a channel first.
+- **Bot:** brand and service menus (Snapp Food, Tapsi Garage, Digikala Jet, …) with animated brand logos from our own custom emoji pack, Persian search, one-tap copy buttons, and alerts when a followed brand gets a new code. Optionally, users must join a channel first.
 - **Runs on [n8n](https://n8n.io):** four workflows (Engine, Crawler, Telegram Bot, Setup) and three n8n Data Tables. The logic lives in this repo as plain JavaScript (`src/`). It is bundled into n8n Code nodes, and the tests run the exact bundles that get deployed.
 
 ```bash

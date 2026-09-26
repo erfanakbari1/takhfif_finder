@@ -181,6 +181,58 @@ check('joining the bot does not save the user (the /start message does); blockin
   assert.strictEqual(blocked.blocked, true);
 });
 
+check('brand logos: animated custom emoji in messages and on buttons, plain emoji outside the pack', async () => {
+  const SNAPP = '5024117283887253544';
+  const SNAPP_FOOD = '5026569873422026474';
+  const TAPSI = '5024281901393776065';
+  const tag = (id, e) => '<tg-emoji emoji-id="' + id + '">' + e + '</tg-emoji>';
+  const stats = { value: JSON.stringify({ total: 20, codes: 10, sources: {}, brands: {
+    snapp: { fa: 'اسنپ', n: 10, c: 5, s: { food: 3, box: 1 } }, tapsi: { fa: 'تپسی', n: 4, c: 2, s: { garage: 4 } },
+    digikala: { fa: 'دیجی‌کالا', n: 3, c: 1, s: { jet: 3 } }, torob: { fa: 'ترب', n: 2, c: 1, s: {} } } }) };
+  const rows = [
+    { ckey: 'snapp|F1', brand: 'snapp', service: 'food', brand_fa: 'اسنپ', title: 'کد فود', code: 'F1', kind: 'code', sources: 'offch', active: true, score: 90 },
+    { ckey: 'snapp|B1', brand: 'snapp', service: 'box', brand_fa: 'اسنپ', title: 'کد باکس', code: 'B1', kind: 'code', sources: 'offch', active: true, score: 80 },
+    { ckey: 'torob|T1', brand: 'torob', service: '', brand_fa: 'ترب', category: 'shop', title: 'کد ترب', code: 'T1', kind: 'code', sources: 'offch', active: true, score: 70 },
+  ];
+  const msg = (text) => ({ message: { message_id: 1, from: { id: 5, first_name: 'Ali' }, chat: { id: 5, type: 'private' }, text } });
+  const cb = (data) => ({ callback_query: { id: 'c1', from: { id: 5, first_name: 'Ali' }, data, message: { message_id: 9, chat: { id: 5, type: 'private' } } } });
+  const reply = async (update, gate) => {
+    const p = (await runEngine({ op: 'botParse', update }))[0];
+    const out = await runEngine({ op: 'botReply', p, user: { user_id: '5', subs: 'snapp:food,tapsi:*' }, stats, rows: p.q.need ? rows : [], gate });
+    return out.find((o) => o.method === 'sendMessage' || o.method === 'editMessageText').payload;
+  };
+  // Home: Telegram draws the logo before the button text, which then carries no emoji of its own.
+  let kb = (await reply(msg('/start'))).reply_markup.inline_keyboard.flat();
+  const snapp = kb.find((b) => b.callback_data === 'b:snapp');
+  assert.deepStrictEqual([snapp.icon_custom_emoji_id, snapp.text], [SNAPP, 'اسنپ (۱۰)']);
+  const torob = kb.find((b) => b.callback_data === 'b:torob');
+  assert.ok(!torob.icon_custom_emoji_id && torob.text === '🔎 ترب (۲)', 'brands outside the pack keep their emoji');
+  // Brand page: logo in the title; service buttons with their own logo, or their plain emoji.
+  let m = await reply(cb('b:snapp'));
+  assert.ok(m.text.startsWith(tag(SNAPP, '🚕') + ' <b>کدهای تخفیف اسنپ</b>'));
+  kb = m.reply_markup.inline_keyboard.flat();
+  assert.strictEqual(kb.find((b) => b.callback_data === 's:snapp:food:0').icon_custom_emoji_id, SNAPP_FOOD);
+  assert.strictEqual(kb.find((b) => b.callback_data === 's:snapp:box:0').text, '📦 اسنپ‌باکس و پیک/وانت (۱)');
+  // All of a brand's codes: each coupon headed by its service.
+  m = await reply(cb('s:snapp:*:0'));
+  assert.ok(m.text.includes('<b>۱) ' + tag(SNAPP_FOOD, '🍔') + ' اسنپ‌فود | کد فود</b>'));
+  assert.ok(m.text.includes('<b>۲) 📦 اسنپ‌باکس و پیک/وانت | کد باکس</b>'));
+  // Mixed lists (hot, newest, search, alerts): the service's logo, else the brand's, else its plain emoji.
+  m = await reply(cb('t:0'));
+  assert.ok(m.text.includes(tag(SNAPP_FOOD, '🍔') + ' اسنپ | کد فود'));
+  assert.ok(m.text.includes(tag(SNAPP, '🚕') + ' اسنپ | کد باکس'));
+  assert.ok(m.text.includes('🔎 ترب | کد ترب'));
+  const alert = (await runEngine({ op: 'alerts', rows: rows.slice(0, 1), users: [{ user_id: '1', subs: 'snapp:*' }] }))[0];
+  assert.ok(alert.payload.text.includes(tag(SNAPP_FOOD, '🍔') + ' اسنپ | کد فود'));
+  // My alerts, the super-apps row under categories, and the channel gate's welcome.
+  m = await reply(cb('my'));
+  assert.ok(m.text.includes('• ' + tag(SNAPP_FOOD, '🍔') + ' اسنپ‌فود') && m.text.includes('• ' + tag(TAPSI, '🚖') + ' همه‌ی تپسی'));
+  kb = (await reply(cb('cats'))).reply_markup.inline_keyboard.flat();
+  assert.deepStrictEqual(kb.filter((b) => b.icon_custom_emoji_id).map((b) => b.text), ['اسنپ', 'تپسی', 'دیجی‌کالا']);
+  m = await reply(msg('/start'), { channel: '@GozarNetPro', check: { ok: true, result: { status: 'left' } } });
+  assert.ok(m.text.includes(tag(SNAPP, '🚕') + ' اسنپ، ' + tag(TAPSI, '🚖') + ' تپسی، '));
+});
+
 if (fixtures && fs.existsSync(fixtures)) {
   check('fetch op parses captured responses', async () => {
     const files = [['b7/b7_00_pb_boodgeh_com.txt', 'boodgeh', 'list'], ['b7/b7_03_t_me.txt', 'telegram', 'list'], ['b6/b6_05_api_offch_com.txt', 'offch', 'reveal']];
